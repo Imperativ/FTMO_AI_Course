@@ -44,10 +44,10 @@ _Verbesserung und Qualitätssteigerung deiner Agenten_
 
 | Kapitel                                        | Titel                                              | Schwierigkeit      | Zeilen |
 | ---------------------------------------------- | -------------------------------------------------- | ------------------ | ------ |
-| [**6**](Kapitel_06_Parameter_Tuning.md)        | Parameter-Tuning und A/B-Vergleiche                | 🟡 Fortgeschritten | 160    |
-| [**7**](Kapitel_07_Multi_Agent_System.md)      | Multi-Agent-Koordination und Rollenaufteilung      | 🟡 Fortgeschritten | 185    |
-| [**8**](Kapitel_08_Performance_Optimierung.md) | Performance-Optimierung und Ressourcenmanagement   | 🟡 Fortgeschritten | 196    |
-| [**9**](Kapitel_09_Qualitaetsmetriken.md)      | Qualitätsmetriken und kontinuierliche Verbesserung | 🟡 Fortgeschritten | 202    |
+| [**6**](Kapitel_06_Parameter_Tuning.md)        | Parameter-Tuning und A/B-Vergleiche                | 🟡 Fortgeschritten | 464    |
+| [**7**](Kapitel_07_Multi_Agent_System.md)      | Multi-Agent-Koordination und Rollenaufteilung      | 🟡 Fortgeschritten | 458    |
+| [**8**](Kapitel_08_Performance_Optimierung.md) | Performance-Optimierung und Ressourcenmanagement   | 🟡 Fortgeschritten | 407    |
+| [**9**](Kapitel_09_Qualitaetsmetriken.md)      | Qualitätsmetriken und kontinuierliche Verbesserung | 🟡 Fortgeschritten | 411    |
 
 ### 🔵 **Professional-Block (Kapitel 10-12)**
 
@@ -55,9 +55,9 @@ _Dokumentation, Sicherheit und professioneller Deployment_
 
 | Kapitel                                             | Titel                                             | Schwierigkeit | Zeilen |
 | --------------------------------------------------- | ------------------------------------------------- | ------------- | ------ |
-| [**10**](Kapitel_10_Dokumentation_Versionierung.md) | Dokumentation, Versionierung und Auditierbarkeit  | 🔵 Profi      | 206    |
-| [**11**](Kapitel_11_Sicherheit_Deployment.md)       | Sicherheit, Compliance und Deployment             | 🔵 Profi      | 198    |
-| [**12**](Kapitel_12_Evaluation_Skalierung.md)       | Evaluation, Skalierung und Enterprise-Integration | 🔵 Profi      | 196    |
+| [**10**](Kapitel_10_Dokumentation_Versionierung.md) | Dokumentation, Versionierung und Auditierbarkeit  | 🔵 Profi      | 415    |
+| [**11**](Kapitel_11_Sicherheit_Deployment.md)       | Sicherheit, Compliance und Deployment             | 🔵 Profi      | 468    |
+| [**12**](Kapitel_12_Evaluation_Skalierung.md)       | Evaluation, Skalierung und Enterprise-Integration | 🔵 Profi      | 481    |
 
 ### 🔴 **Advanced-Block (Kapitel 13-15)**
 
@@ -65,9 +65,9 @@ _Präsentation, Dokumentation und fortgeschrittene Kollaboration_
 
 | Kapitel                                             | Titel                                                    | Schwierigkeit | Zeilen |
 | --------------------------------------------------- | -------------------------------------------------------- | ------------- | ------ |
-| [**13**](Kapitel_13_Systemdossier_Praesentation.md) | Systemdossier, Export und Präsentation                   | 🔴 Experte    | 192    |
-| [**14**](Kapitel_14_Adaptive_Strategien.md)         | Adaptive Strategien und Machine Learning Integration     | 🔴 Experte    | 177    |
-| [**15**](Kapitel_15_Multi_Agent_Kollaboration.md)   | Multi-Agent-Kollaboration und hybride Entscheidungsnetze | 🔴 Experte    | 188    |
+| [**13**](Kapitel_13_Systemdossier_Praesentation.md) | Systemdossier, Export und Präsentation                   | 🔴 Experte    | 429    |
+| [**14**](Kapitel_14_Adaptive_Strategien.md)         | Adaptive Strategien und Machine Learning Integration     | 🔴 Experte    | 1011   |
+| [**15**](Kapitel_15_Multi_Agent_Kollaboration.md)   | Multi-Agent-Kollaboration und hybride Entscheidungsnetze | 🔴 Experte    | 360    |
 
 ### 🟣 **Specialized-Block (Kapitel 16-18)**
 
@@ -75,9 +75,9 @@ _Echtzeit-Integration und ethische Überlegungen_
 
 | Kapitel                                         | Titel                                   | Schwierigkeit | Zeilen |
 | ----------------------------------------------- | --------------------------------------- | ------------- | ------ |
-| [**16**](Kapitel_16_Echtzeit_Integration.md)    | Echtzeit-Integration und Live-Handel    | 🟣 Spezialist | 138    |
-| [**17**](Kapitel_17_Simulation_Testumgebung.md) | Simulation und Testumgebung             | 🟣 Spezialist | 119    |
-| [**18**](Kapitel_18_Ethik_Aufsicht.md)          | Ethik, Haftung und menschliche Aufsicht | 🟣 Spezialist | 107    |
+| [**16**](Kapitel_16_Echtzeit_Integration.md)    | Echtzeit-Integration und Live-Handel    | 🟣 Spezialist | 264    |
+| [**17**](Kapitel_17_Simulation_Testumgebung.md) | Simulation und Testumgebung             | 🟣 Spezialist | 288    |
+| [**18**](Kapitel_18_Ethik_Aufsicht.md)          | Ethik, Haftung und menschliche Aufsicht | 🟣 Spezialist | 269    |
 
 ---
 
@@ -223,7 +223,7 @@ Das Projekt enthält optimierte VS Code Settings:
 
 ## 📊 **Kurs-Statistiken**
 
-- **📚 18 Kapitel** mit über 3.000 Zeilen Content
+- **📚 18 Kapitel** mit über 6.900 Zeilen Content
 - **🚨 Strukturierte Debugging-Sektionen** in allen Kapiteln
 - **💻 100+ Code-Beispiele** für direkte Anwendung
 - **🧩 50+ Hausaufgaben** und praktische Übungen
