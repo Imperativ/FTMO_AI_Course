@@ -1,232 +1,347 @@
 # 📘 Kapitel 17 – Test- und Simulationsumgebungen für KI-Agenten und Handelssysteme
 
-**Lernziel:**  
-Nach dieser Lektion kannst du dein Agentensystem unter kontrollierten Bedingungen testen, Marktstrategien reproduzierbar simulieren und fehlerfreie Backtests durchführen.  
-Du lernst, wie man historische Daten korrekt einliest, Strategien bewertet, Testläufe automatisiert und Debugging-Informationen so aufzeichnet, dass sich jedes Ergebnis lückenlos nachvollziehen lässt.
+**Lernziel:**
+Nach dieser Lektion kannst du dein Agentensystem unter kontrollierten Bedingungen testen, Marktstrategien reproduzierbar simulieren und fehlerfreie Backtests durchführen.
 
 ---
 
 ## 🧩 Abschnitt 1 – Warum Simulationen unverzichtbar sind
 
-Ein System, das direkt mit echtem Kapital getestet wird, ist kein Test – es ist Glücksspiel.  
-Professionelle Automatisierer führen Simulationen durch, um Risiken vorherzusehen, Schwächen zu erkennen und Strategien objektiv zu bewerten.  
+Ein System, das direkt mit echtem Kapital getestet wird, ist kein Test – es ist Glücksspiel.
+Professionelle Automatisierer führen Simulationen durch, um Risiken vorherzusehen, Schwächen zu erkennen und Strategien objektiv zu bewerten.
 
-Wichtige Ziele:
-- **Reproduzierbarkeit:** gleiche Eingaben → gleiche Ergebnisse.  
-- **Validierung:** Prüfen, ob Entscheidungen logisch konsistent sind.  
-- **Fehlerdiagnose:** jedes Zwischenergebnis kann analysiert werden.  
-- **Optimierung:** Parameter iterativ anpassen, ohne Risiko.  
+### Wichtige Ziele
 
----
+- **Reproduzierbarkeit:** Gleiche Eingaben → gleiche Ergebnisse
+- **Validierung:** Prüfen, ob Entscheidungen logisch konsistent sind
+- **Fehlerdiagnose:** Jedes Zwischenergebnis kann analysiert werden
+- **Optimierung:** Parameter iterativ anpassen, ohne Risiko
+- **Risiko-Bewertung:** Worst-Case-Szenarien testen
 
-## ⚙️ Abschnitt 2 – Beschaffung historischer Marktdaten
+### Simulation vs. Live-Trading
 
-Verlässliche Datenquellen:
-- **Binance API** → bis zu 1000 Kerzen / Abfrage.  
-- **Yahoo Finance** → Tagesdaten für Aktien und Indizes.  
-- **Oanda / FXCM** → Forex-Daten.  
-- **CryptoDataDownload / Kaggle** → CSV-Archive.  
-
-**Beispiel REST-Abfrage (Binance):**
-```bash
-GET https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1m&limit=1000
-```
-
-**n8n-Variante:**
-1. Node „HTTP Request“ → URL wie oben.  
-2. Function-Node:  
-```javascript
-return $json.map(k => ({
-  openTime: k[0],
-  open: parseFloat(k[1]),
-  high: parseFloat(k[2]),
-  low: parseFloat(k[3]),
-  close: parseFloat(k[4]),
-  volume: parseFloat(k[5])
-}));
-```
-
-**Debugging-Hinweis:**  
-Fehler „429 Too Many Requests“ → Rate-Limit erreicht.  
-→ Lösung: `await new Promise(r => setTimeout(r, 2000));` zwischen Requests.
+| Aspekt          | Simulation          | Live        |
+| --------------- | ------------------- | ----------- |
+| Risiko          | Kein echtes Kapital | Reales Geld |
+| Geschwindigkeit | Beliebig schnell    | Echtzeit    |
+| Daten           | Historisch          | Aktuell     |
+| Slippage        | Geschätzt           | Real        |
+| Emotionen       | Keine               | Faktor      |
 
 ---
 
-## 🧠 Abschnitt 3 – Backtesting-Workflow in n8n
+## ⚙️ Abschnitt 2 – Historische Marktdaten beschaffen
 
-Ziel: deine Strategie so ausführen, als würde sie live handeln – aber ausschließlich auf gespeicherten Daten.
+### Datenquellen
 
-**Struktur:**
-```
-[Read Data] → [Preprocessing] → [Agent Decision] → [Simulated Execution] → [Log + Metrics]
-```
+- **Binance API:** Bis zu 1000 Kerzen/Abfrage (kostenlos)
+- **Yahoo Finance:** Tagesdaten für Aktien/Indizes
+- **Oanda/FXCM:** Forex-Daten mit hoher Qualität
+- **CryptoDataDownload:** CSV-Archive für Krypto
 
-**Implementation:**
-1. Node „Read Binary File“ → CSV einlesen.  
-2. Node „Spreadsheet File“ oder „Split In Batches“ → eine Kerze = ein Tick.  
-3. Node „Function“ → an Agent-Flow senden:  
+### Binance API Implementation
+
 ```javascript
-for (const candle of $json.data) {
-  sendToAgent(candle);
-  await new Promise(r => setTimeout(r, 100)); // simulierte Zeit
+// Historical Data Downloader
+const axios = require("axios");
+
+async function downloadData(symbol, interval, limit = 1000) {
+  const url = `https://api.binance.com/api/v3/klines`;
+  const response = await axios.get(url, {
+    params: { symbol, interval, limit },
+  });
+
+  return response.data.map((k) => ({
+    timestamp: k[0],
+    open: parseFloat(k[1]),
+    high: parseFloat(k[2]),
+    low: parseFloat(k[3]),
+    close: parseFloat(k[4]),
+    volume: parseFloat(k[5]),
+  }));
 }
-```
 
-**Debugging-Tipp:**  
-Wenn Speicherverbrauch > 500 MB, verwende Stream-Verarbeitung (`readline` oder Batch-Size < 100).
-
----
-
-## 💡 Abschnitt 4 – Virtuelle Handels-Engine
-
-Die „Execution-Simulation“ ersetzt den Broker-Server.
-
-```javascript
-function executeTrade(signal, price) {
-  const fee = 0.001; // 0,1 %
-  const fill = price * (1 + (signal === "BUY" ? fee : -fee));
-  return { fill, pnl: signal === "BUY" ? -fee : fee };
-}
-```
-
-**Debugging-Hinweis:**  
-Unrealistisch hohe Gewinne → meist fehlende Gebühren oder Slippage ignoriert.  
-Slippage = Preisabweichung zwischen Signal und Ausführung.  
-
-```javascript
-const slippage = price * 0.0003; // 0.03 %
+// Verwendung mit Rate-Limiting
+const data = await downloadData("BTCUSDT", "1m");
+await new Promise((r) => setTimeout(r, 1000)); // Rate limit
+return [{ json: { candles: data } }];
 ```
 
 ---
 
-## ⚙️ Abschnitt 5 – Bewertungsmetriken
+## 🧠 Abschnitt 3 – Backtesting-Engine
 
-Zentrale Kennzahlen:
-| Kennzahl | Bedeutung |
-|-----------|-----------|
-| **Winrate** | Anteil erfolgreicher Trades |
-| **Profitfaktor** | Summe Gewinne / Summe Verluste |
-| **Max Drawdown** | größter Kapitalrückgang |
-| **Sharpe Ratio** | Rendite / Volatilität |
-| **Expectancy** | Erwartungswert pro Trade |
-
-**Beispiel-Berechnung:**
-```javascript
-const pnl = $json.trades.map(t => t.pnl);
-const avg = pnl.reduce((a,b)=>a+b,0)/pnl.length;
-const std = Math.sqrt(pnl.map(x=>(x-avg)**2).reduce((a,b)=>a+b)/pnl.length);
-return [{ sharpe: avg/std }];
-```
-
-**Debugging-Hinweis:**  
-Wenn `std=0` → keine Varianz → Testdaten zu kurz oder identische P&L-Werte.
-
----
-
-## 🧩 Abschnitt 6 – Parameter-Optimierung
-
-Nutze n8n-Loops oder externe Skripte, um Strategien mit verschiedenen Parametern zu testen:
+### Grundstruktur
 
 ```javascript
-for (let stopLoss of [0.5, 1, 2]) {
-  for (let takeProfit of [1, 2, 3]) {
-    runTest({ stopLoss, takeProfit });
+// Backtesting Engine
+class BacktestEngine {
+  constructor(initialCapital = 10000) {
+    this.capital = initialCapital;
+    this.initialCapital = initialCapital;
+    this.position = null;
+    this.trades = [];
+    this.equity = [initialCapital];
+  }
+
+  executeTrade(signal, price, timestamp) {
+    const fee = 0.001; // 0.1%
+    const slippage = 0.0003; // 0.03%
+
+    if (signal === "BUY" && !this.position) {
+      const cost = price * (1 + fee + slippage);
+      const quantity = this.capital / cost;
+
+      this.position = {
+        type: "LONG",
+        entryPrice: cost,
+        quantity: quantity,
+        entryTime: timestamp,
+      };
+
+      this.capital = 0;
+    } else if (signal === "SELL" && this.position?.type === "LONG") {
+      const revenue = price * (1 - fee - slippage);
+      const pnl = (revenue - this.position.entryPrice) * this.position.quantity;
+
+      this.capital = this.position.quantity * revenue;
+
+      this.trades.push({
+        entryPrice: this.position.entryPrice,
+        exitPrice: revenue,
+        quantity: this.position.quantity,
+        pnl: pnl,
+        duration: timestamp - this.position.entryTime,
+        returnPct: (revenue / this.position.entryPrice - 1) * 100,
+      });
+
+      this.position = null;
+    }
+
+    // Berechne aktuelles Equity
+    let currentEquity = this.capital;
+    if (this.position) {
+      currentEquity = this.position.quantity * price;
+    }
+
+    this.equity.push(currentEquity);
+  }
+
+  getMetrics() {
+    const wins = this.trades.filter((t) => t.pnl > 0);
+    const losses = this.trades.filter((t) => t.pnl <= 0);
+
+    const totalPnl = this.trades.reduce((sum, t) => sum + t.pnl, 0);
+    const winrate = wins.length / this.trades.length;
+
+    const avgWin =
+      wins.length > 0 ? wins.reduce((s, t) => s + t.pnl, 0) / wins.length : 0;
+    const avgLoss =
+      losses.length > 0
+        ? Math.abs(losses.reduce((s, t) => s + t.pnl, 0) / losses.length)
+        : 0;
+    const profitFactor = avgLoss > 0 ? avgWin / avgLoss : 0;
+
+    // Max Drawdown
+    let peak = this.equity[0],
+      maxDD = 0;
+    this.equity.forEach((eq) => {
+      if (eq > peak) peak = eq;
+      const dd = (peak - eq) / peak;
+      if (dd > maxDD) maxDD = dd;
+    });
+
+    // Sharpe Ratio (vereinfacht)
+    const returns = this.trades.map((t) => t.returnPct);
+    const avgReturn = returns.reduce((a, b) => a + b, 0) / returns.length;
+    const variance =
+      returns.reduce((s, r) => s + Math.pow(r - avgReturn, 2), 0) /
+      returns.length;
+    const sharpe =
+      Math.sqrt(variance) > 0 ? avgReturn / Math.sqrt(variance) : 0;
+
+    return {
+      totalTrades: this.trades.length,
+      winrate: winrate,
+      profitFactor: profitFactor,
+      totalPnl: totalPnl,
+      totalReturn: (this.capital / this.initialCapital - 1) * 100,
+      maxDrawdown: maxDD,
+      sharpeRatio: sharpe,
+      avgWin: avgWin,
+      avgLoss: avgLoss,
+    };
   }
 }
-```
 
-Ergebnisse in JSON speichern und vergleichen:
-```bash
-jq '.[] | {stopLoss, takeProfit, sharpe}' results.json
+// Verwendung
+const engine = new BacktestEngine(10000);
+// Feed mit historischen Daten...
+const metrics = engine.getMetrics();
+return [{ json: metrics }];
 ```
-
-**Debugging-Tipp:**  
-Bei großen Parameterräumen → Parallelisierung aktivieren (`n8n queue mode`) und CPU-Last beobachten.
 
 ---
 
-## 💡 Abschnitt 7 – Regressionstests
+## 💡 Abschnitt 4 – Monte-Carlo-Simulation
 
-Damit spätere Änderungen deinen Flow nicht unbemerkt verfälschen:
-
-```bash
-n8n execute --id=23 --input=./data/btcusdt_test.json
-```
-
-Anschließend Output mit früherer Version vergleichen:
-```bash
-diff -u results_old.json results_new.json
-```
-
-**Debugging-Hinweis:**  
-Unterschiede nur durch Rundungsfehler? → Float auf 4 Stellen runden (`toFixed(4)`).
-
----
-
-## ⚙️ Abschnitt 8 – Visualisierung der Ergebnisse
-
-Mit n8n-Chart-Node oder lokal via Python (Matplotlib).  
-Beispiel:  
-```python
-import pandas as pd, matplotlib.pyplot as plt
-df = pd.read_csv('results.csv')
-plt.plot(df['time'], df['equity'])
-plt.title('Equity Curve')
-plt.show()
-```
-
-**Debugging-Tipp:**  
-Abweichende Kurven → Zeitzonen oder Candle-Lücken prüfen (`NaN`-Werte interpolieren).
-
----
-
-## 🧠 Abschnitt 9 – Automatisierte Reports
-
-Am Ende jedes Testlaufs:
 ```javascript
-return [{
-  date: new Date().toISOString(),
-  sharpe: sharpe,
-  trades: pnl.length,
-  max_drawdown: mdd,
-  notes: "Backtest abgeschlossen"
-}];
-```
-Dann per E-Mail oder Telegram senden:
-```bash
-sendTelegram("Backtest abgeschlossen: Sharpe =" + sharpe);
+// Monte Carlo Simulation - teste Robustheit
+function monteCarloSimulation(trades, runs = 1000) {
+  const results = [];
+
+  for (let i = 0; i < runs; i++) {
+    const shuffled = [...trades].sort(() => Math.random() - 0.5);
+    let equity = 10000,
+      peak = equity,
+      maxDD = 0;
+
+    shuffled.forEach((trade) => {
+      equity += trade.pnl;
+      if (equity > peak) peak = equity;
+      const dd = (peak - equity) / peak;
+      if (dd > maxDD) maxDD = dd;
+    });
+
+    results.push({ finalEquity: equity, maxDrawdown: maxDD });
+  }
+
+  results.sort((a, b) => a.finalEquity - b.finalEquity);
+
+  return {
+    worst: results[0],
+    best: results[results.length - 1],
+    median: results[Math.floor(results.length / 2)],
+  };
+}
 ```
 
 ---
 
-## 🧭 Abschnitt 10 – Reflexion
+## 🚨 Abschnitt 5 – Debug-Sektion
 
-- Wann sind Simulationsergebnisse trügerisch?  
-- Wie erkennst du Overfitting in deiner Strategie?  
-- Welche Parameter würdest du bei Live-Daten anders wählen?  
-- Wie dokumentierst du deine Tests, um sie Jahre später noch zu verstehen?
+### Debug 1: Unrealistisch hohe Gewinne
+
+**Problem:** Backtest zeigt 500% Gewinn in einer Woche.
+
+**Ursachen:**
+
+- Fehlende Gebühren
+- Kein Slippage
+- Look-ahead Bias (Zukunftsdaten verwendet)
+- Übermäßiges Leverage
+
+**Lösung:**
+
+```javascript
+// Realistische Kosten einbauen
+const tradingCosts = {
+  fee: 0.001, // 0.1%
+  slippage: 0.0003, // 0.03%
+  minFee: 0.1, // Mindestgebühr
+};
+
+const totalCost = Math.max(price * quantity * (fee + slippage), minFee);
+```
+
+### Debug 2: Equity-Kurve bricht plötzlich ein
+
+**Problem:** Backtest läuft gut, dann Totalverlust.
+
+**Ursachen:**
+
+- Fehlende Stop-Loss-Implementation
+- Margin Call nicht simuliert
+- Daten-Lücke in Historie
+
+**Lösung:**
+
+```javascript
+// Stop-Loss prüfen
+if (position && price <= position.entryPrice * (1 - stopLossPct)) {
+  executeTrade("SELL", price, timestamp);
+  console.log("Stop-Loss triggered");
+}
+```
+
+### Debug 3: Divergierende Ergebnisse
+
+**Problem:** Gleiche Daten, unterschiedliche Ergebnisse.
+
+**Lösung:** Verwende festen Random-Seed für Reproduzierbarkeit.
+
+```javascript
+// Seeded Random
+const seed = 42;
+Math.seedrandom = (s) => {
+  /* Implementation */
+};
+Math.seedrandom(seed);
+```
 
 ---
 
-## 🧩 Abschnitt 11 – Hausaufgabe / Experiment
+## 📊 Abschnitt 6 – Walk-Forward-Analyse
 
-1. Lade 24 Stunden BTC-USDT-Kerzen von Binance.  
-2. Baue einen Backtest-Flow mit 1-Min-Ticks.  
-3. Implementiere Fee-Handling, Slippage und Stop-Loss.  
-4. Berechne Sharpe-Ratio + Max-Drawdown.  
-5. Erstelle daraus einen PDF-Report mit Diagrammen.  
+```javascript
+// Walk-Forward Analysis - verhindert Overfitting
+function walkForward(data, inPeriod, outPeriod) {
+  const results = [];
 
-Optional: Führe denselben Test mit zwei Strategien aus und vergleiche die Equity-Kurven.
+  for (let i = 0; i < data.length - inPeriod - outPeriod; i += outPeriod) {
+    const inSample = data.slice(i, i + inPeriod);
+    const outSample = data.slice(i + inPeriod, i + inPeriod + outPeriod);
+
+    const params = optimize(inSample);
+    const perf = backtest(outSample, params);
+
+    results.push({
+      inReturn: params.return,
+      outReturn: perf.return,
+      degradation: params.return - perf.return,
+    });
+  }
+
+  return results;
+}
+```
+
+---
+
+## 📋 Hausaufgaben
+
+**Aufgabe 1: Backtest-Engine (⭐⭐⭐)**
+
+- Implementiere vollständige Backtesting-Engine
+- Unterstütze Long- und Short-Positionen
+- Berechne alle Metriken (Sharpe, Drawdown, etc.)
+- Teste mit 7 Tagen BTC-Daten
+
+**Aufgabe 2: Monte-Carlo-Simulation (⭐⭐⭐)**
+
+- Führe 1000 Monte-Carlo-Runs durch
+- Visualisiere Equity-Verteilung
+- Berechne 5%/95% Percentile
+- Dokumentiere Worst-Case-Szenario
+
+**Aufgabe 3: Walk-Forward-Test (⭐⭐⭐⭐)**
+
+- Implementiere Walk-Forward-Analyse
+- In-Sample: 60 Tage, Out-Sample: 30 Tage
+- Vergleiche In-Sample vs. Out-Sample Performance
+- Erstelle Report über Degradation
 
 ---
 
 ## ✅ Zusammenfassung
 
 Nach Kapitel 17 kannst du:
-- historische Marktdaten einlesen und simuliert verarbeiten,  
-- Strategien reproduzierbar testen und optimieren,  
-- Performance-Metriken korrekt berechnen,  
-- Regressionstests durchführen,  
-- und alle Ergebnisse transparent dokumentieren.  
 
-Im nächsten Kapitel (18) geht es darum, **wie du ethische und rechtliche Grenzen definierst** – damit dein System nicht nur effizient, sondern auch verantwortungsvoll handelt.
+- historische Marktdaten korrekt einlesen und verarbeiten,
+- vollständige Backtesting-Engines mit realistischen Kosten implementieren,
+- Monte-Carlo-Simulationen für Robustheitstests durchführen,
+- Walk-Forward-Analysen zur Overfitting-Vermeidung nutzen,
+- häufige Backtest-Fehler identifizieren und beheben,
+- und reproduzierbare Test-Pipelines aufbauen.
+
+Im nächsten Kapitel (18) geht es um **Ethik und Aufsicht** – wie du dein System verantwortungsvoll betreibst und regulatorische Anforderungen erfüllst.
