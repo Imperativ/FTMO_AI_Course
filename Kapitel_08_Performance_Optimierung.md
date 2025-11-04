@@ -1,7 +1,7 @@
 # 📘 Kapitel 8 – Performance-Optimierung und Fehler-Recovery
 
-**Lernziel:**  
-Nach dieser Lektion kannst du deine Workflows so strukturieren, dass sie **schneller**, **stabiler** und **ausfallsicherer** laufen.  
+**Lernziel:**
+Nach dieser Lektion kannst du deine Workflows so strukturieren, dass sie **schneller**, **stabiler** und **ausfallsicherer** laufen.
 Du lernst, wie du Flaschenhälse erkennst, Logs zur Laufzeitanalyse nutzt und deinen Agenten nach Fehlern automatisch wiederherstellen lässt.
 
 ---
@@ -9,31 +9,36 @@ Du lernst, wie du Flaschenhälse erkennst, Logs zur Laufzeitanalyse nutzt und de
 ## 🧩 Abschnitt 1 – Warum Performance im Multi-Agent-System kritisch ist
 
 Mit jedem zusätzlichen Node steigen:
-- Ausführungszeit  
-- API-Aufrufe  
-- Tokenkosten  
-- Fehlerwahrscheinlichkeit  
 
-Ziel ist also **Effizienz ohne Funktionsverlust**.  
+- Ausführungszeit
+- API-Aufrufe
+- Tokenkosten
+- Fehlerwahrscheinlichkeit
+
+Ziel ist also **Effizienz ohne Funktionsverlust**.
 Ein performanter Flow ist nicht der kürzeste, sondern der, der die **richtigen Aufgaben am richtigen Ort** ausführt – möglichst parallel, mit klar definierten Rückfällen (Fallbacks), falls etwas schiefläuft.
 
 ---
 
 ## ⚙️ Abschnitt 2 – Performance messen
 
-n8n liefert im *Execution Panel* bereits Basisdaten:
-- **Execution time:** Gesamtlaufzeit pro Run  
-- **Node timings:** Dauer pro Node  
-- **Memory footprint:** angezeigt in Logs  
+n8n liefert im _Execution Panel_ bereits Basisdaten:
+
+- **Execution time:** Gesamtlaufzeit pro Run
+- **Node timings:** Dauer pro Node
+- **Memory footprint:** angezeigt in Logs
 
 ### Debugging-Tipp:
+
 Ergänze in jedem kritischen Node eine Messung der Laufzeit:
+
 ```javascript
 const start = Date.now();
 // … dein Code …
 const duration = Date.now() - start;
 return [{ ...$json, duration_ms: duration }];
 ```
+
 So kannst du im Data Store später Laufzeiten auswerten.
 
 Optional: lege eine eigene Tabelle `performance_logs` an mit Feldern:
@@ -46,10 +51,12 @@ Optional: lege eine eigene Tabelle `performance_logs` an mit Feldern:
 Wenn dein Flow mehrere unabhängige Symbol-Analysen ausführt (z. B. BTC, EUR/USD, Gold), kannst du sie parallel laufen lassen.
 
 Nutze:
-- **Split In Batches Node:** um Daten auf mehrere Flows zu verteilen.  
-- **Workflow Execute Node:** um Sub-Flows parallel zu starten.  
+
+- **Split In Batches Node:** um Daten auf mehrere Flows zu verteilen.
+- **Workflow Execute Node:** um Sub-Flows parallel zu starten.
 
 Beispiel:
+
 ```
 [Webhook Trigger]
    ↓
@@ -60,17 +67,18 @@ Beispiel:
 
 Jeder Sub-Flow behandelt ein Symbol – so halbierst du Laufzeit bei stabiler API-Performance.
 
-**Debugging-Hinweis:**  
-Beobachte die *Execution IDs* im Dashboard. Wenn eine Batch fehlschlägt, kannst du sie gezielt neu starten, ohne den ganzen Run zu wiederholen.
+**Debugging-Hinweis:**
+Beobachte die _Execution IDs_ im Dashboard. Wenn eine Batch fehlschlägt, kannst du sie gezielt neu starten, ohne den ganzen Run zu wiederholen.
 
 ---
 
 ## 💡 Abschnitt 4 – Fehler-Recovery: dein Agent heilt sich selbst
 
-Fehler sind unvermeidlich, aber sie dürfen den Gesamtprozess nicht stoppen.  
+Fehler sind unvermeidlich, aber sie dürfen den Gesamtprozess nicht stoppen.
 
-### Strategie 1: Error Workflow  
-Wie schon in Kapitel 7 erwähnt – dieser Workflow wird bei jedem Fehler getriggert.  
+### Strategie 1: Error Workflow
+
+Wie schon in Kapitel 7 erwähnt – dieser Workflow wird bei jedem Fehler getriggert.
 Erstelle ein standardisiertes Recovery-Schema:
 
 ```
@@ -84,6 +92,7 @@ Erstelle ein standardisiertes Recovery-Schema:
 ```
 
 **Function Node (Beispiel):**
+
 ```javascript
 const e = $json.error || {};
 if (e.message.includes("timeout")) return [{ type: "retry" }];
@@ -97,8 +106,9 @@ So unterscheidet dein System automatisch zwischen „nochmal versuchen“ und �
 
 ## 🧩 Abschnitt 5 – Wiederholungslogik (Retries)
 
-In normalen Nodes kannst du unter *Settings → Max. Tries* Wiederholungen aktivieren.  
+In normalen Nodes kannst du unter _Settings → Max. Tries_ Wiederholungen aktivieren.
 Alternativ per Node-Logik:
+
 ```javascript
 let attempts = 0;
 let success = false;
@@ -109,7 +119,7 @@ while (!success && attempts < 3) {
   } catch (err) {
     attempts++;
     console.warn(`Retry ${attempts}`);
-    await new Promise(r => setTimeout(r, 2000)); // Pause zwischen Versuchen
+    await new Promise((r) => setTimeout(r, 2000)); // Pause zwischen Versuchen
   }
 }
 return [{ attempts }];
@@ -124,6 +134,7 @@ Diese Schleifen-Nodes schützen dich vor kurzzeitigen Netzwerkproblemen.
 Lege für jede wichtige Ausführung eine Log-Datei an, z. B. im `logs/`-Ordner deines Projekts.
 
 **Function Node:**
+
 ```javascript
 const fs = require("fs");
 const logPath = `/data/logs/run_${new Date().toISOString()}.json`;
@@ -131,19 +142,23 @@ fs.writeFileSync(logPath, JSON.stringify($json, null, 2));
 return $input.all();
 ```
 
-Alternativ: nutze den n8n-Data-Store oder ein externes Tool (z. B. Loki, Grafana, InfluxDB).  
+Alternativ: nutze den n8n-Data-Store oder ein externes Tool (z. B. Loki, Grafana, InfluxDB).
 Logs sind Gold – sie sind der Unterschied zwischen „Fehler“ und „Erkenntnis“.
 
 ---
 
 ## 🧩 Abschnitt 7 – Ressourcen sparen mit Conditional Execution
 
-Jede LLM-Abfrage kostet Zeit und Tokens.  
+Jede LLM-Abfrage kostet Zeit und Tokens.
 Deshalb: nur dann anfragen, wenn neue Daten vorliegen oder sich Marktbedingungen stark geändert haben.
 
 **Function Node (Vorprüfung):**
+
 ```javascript
-if ($json.lastUpdate && Date.now() - new Date($json.lastUpdate).getTime() < 60000) {
+if (
+  $json.lastUpdate &&
+  Date.now() - new Date($json.lastUpdate).getTime() < 60000
+) {
   return []; // Überspringe, wenn zu frisch
 }
 return [$json];
@@ -155,43 +170,232 @@ So vermeidest du unnötige API-Calls.
 
 ## 🧩 Abschnitt 8 – Praxis: Recovery-Flow mit automatischer Wiederaufnahme
 
-1. Baue deinen **Error Workflow**, der Timeouts erkennt und fehlgeschlagene Runs neu startet.  
-2. Implementiere Retry-Schleifen in kritischen Nodes.  
-3. Logge alle Fehler systematisch in `error_log` Data Store.  
-4. Ergänze einen Telegram-Node, der bei dreimaligem Fehlschlag eine Nachricht sendet.  
-5. Führe Stresstest aus: 10 parallele Ausführungen → prüfe Logs auf Ausfälle.  
+1. Baue deinen **Error Workflow**, der Timeouts erkennt und fehlgeschlagene Runs neu startet.
+2. Implementiere Retry-Schleifen in kritischen Nodes.
+3. Logge alle Fehler systematisch in `error_log` Data Store.
+4. Ergänze einen Telegram-Node, der bei dreimaligem Fehlschlag eine Nachricht sendet.
+5. Führe Stresstest aus: 10 parallele Ausführungen → prüfe Logs auf Ausfälle.
 
 **Debugging-Checkliste:**
-- Werden Fehlermeldungen im Error Workflow sichtbar?  
-- Funktioniert Retry korrekt?  
-- Bleibt der Agent nach Recovery konsistent (keine doppelten Einträge)?  
+
+- Werden Fehlermeldungen im Error Workflow sichtbar?
+- Funktioniert Retry korrekt?
+- Bleibt der Agent nach Recovery konsistent (keine doppelten Einträge)?
 
 ---
 
 ## 🧭 Abschnitt 9 – Reflexion
 
-- Wie erkennst du in Logs die wahren Ursachen (Logikfehler vs. externe Ausfälle)?  
-- Welche Schwachstelle ist bei dir am anfälligsten für Timeouts?  
+- Wie erkennst du in Logs die wahren Ursachen (Logikfehler vs. externe Ausfälle)?
+- Welche Schwachstelle ist bei dir am anfälligsten für Timeouts?
 - Wie würdest du mit zu hohen Tokenkosten umgehen – eher caching oder weniger Detail im Prompt?
 
 ---
 
 ## 🧩 Abschnitt 10 – Hausaufgabe / Experiment
 
-1. Erstelle einen Recovery-Workflow mit Telegram-Benachrichtigung.  
-2. Simuliere absichtlich einen Fehler (z. B. ungültigen JSON-Response) und beobachte die Recovery.  
-3. Miss die Laufzeiten einzelner Nodes und speichere sie.  
-4. Reduziere Laufzeit durch Batch-Ausführung oder Vorprüfung.  
+1. Erstelle einen Recovery-Workflow mit Telegram-Benachrichtigung.
+2. Simuliere absichtlich einen Fehler (z. B. ungültigen JSON-Response) und beobachte die Recovery.
+3. Miss die Laufzeiten einzelner Nodes und speichere sie.
+4. Reduziere Laufzeit durch Batch-Ausführung oder Vorprüfung.
 5. Notiere vor und nach der Optimierung: „Durchschnittliche Laufzeit“, „Tokenverbrauch“, „Fehlerrate“.
+
+---
+
+## 🚨 Abschnitt 11 – Performance & Recovery Debugging
+
+### Häufige Performance-Probleme
+
+**Problem:** Workflows werden immer langsamer
+**Debug-Strategie:**
+
+```javascript
+// Performance-Bottleneck-Analyse
+const analyzePerformanceBottlenecks = (executionData) => {
+  const nodePerformance = {};
+
+  for (const execution of executionData) {
+    for (const node of execution.nodes) {
+      if (!nodePerformance[node.name]) {
+        nodePerformance[node.name] = {
+          totalTime: 0,
+          executions: 0,
+          errors: 0,
+          avgTime: 0,
+        };
+      }
+
+      nodePerformance[node.name].totalTime += node.duration;
+      nodePerformance[node.name].executions++;
+      if (node.error) nodePerformance[node.name].errors++;
+    }
+  }
+
+  // Berechne Durchschnittswerte
+  Object.keys(nodePerformance).forEach((nodeName) => {
+    const perf = nodePerformance[nodeName];
+    perf.avgTime = perf.totalTime / perf.executions;
+    perf.errorRate = perf.errors / perf.executions;
+  });
+
+  // Sortiere nach langsamsten Nodes
+  const bottlenecks = Object.entries(nodePerformance)
+    .sort(([, a], [, b]) => b.avgTime - a.avgTime)
+    .slice(0, 5);
+
+  console.log("Top 5 Performance Bottlenecks:", bottlenecks);
+  return bottlenecks;
+};
+```
+
+### Memory-Leak Detection
+
+**Problem:** n8n Workflows verbrauchen immer mehr Speicher
+**Monitoring-Lösung:**
+
+```javascript
+// Memory-Usage Tracking
+const trackMemoryUsage = () => {
+  const memUsage = process.memoryUsage();
+  const memInfo = {
+    rss: Math.round(memUsage.rss / 1024 / 1024), // MB
+    heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024),
+    heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024),
+    external: Math.round(memUsage.external / 1024 / 1024),
+    timestamp: new Date().toISOString(),
+  };
+
+  console.log(`Memory Usage: ${memInfo.heapUsed}MB / ${memInfo.heapTotal}MB`);
+
+  // Alert bei hohem Speicherverbrauch
+  if (memInfo.heapUsed > 500) {
+    // 500MB Threshold
+    console.warn("⚠️ High memory usage detected!");
+    // Optional: Telegram Alert senden
+  }
+
+  return [{ memory_usage: memInfo, ...$json }];
+};
+```
+
+### Error-Recovery Testing
+
+**Problem:** Recovery-Mechanismen funktionieren nicht zuverlässig
+**Test-Framework:**
+
+```javascript
+// Error-Recovery Validation
+const testErrorRecovery = async (testScenarios) => {
+  const results = [];
+
+  for (const scenario of testScenarios) {
+    console.log(`Testing scenario: ${scenario.name}`);
+
+    try {
+      // Simuliere Fehler
+      await scenario.errorSimulation();
+
+      // Warte auf Recovery
+      await new Promise((resolve) =>
+        setTimeout(resolve, scenario.recoveryTimeout || 5000),
+      );
+
+      // Prüfe Recovery-Status
+      const recoveryResult = await scenario.validateRecovery();
+
+      results.push({
+        scenario: scenario.name,
+        success: recoveryResult.success,
+        recoveryTime: recoveryResult.time,
+        message: recoveryResult.message,
+      });
+    } catch (error) {
+      results.push({
+        scenario: scenario.name,
+        success: false,
+        error: error.message,
+        timestamp: new Date().toISOString(),
+      });
+    }
+  }
+
+  const successRate = results.filter((r) => r.success).length / results.length;
+  console.log(`Recovery Success Rate: ${(successRate * 100).toFixed(1)}%`);
+
+  return results;
+};
+```
+
+### Parallel Processing Debugging
+
+**Problem:** Parallel-Workflows interferieren miteinander
+**Isolation-Strategie:**
+
+```javascript
+// Parallel Execution Manager
+const manageParallelExecution = async (tasks, maxConcurrency = 3) => {
+  const results = [];
+  const running = [];
+  const queue = [...tasks];
+
+  while (queue.length > 0 || running.length > 0) {
+    // Starte neue Tasks bis maxConcurrency erreicht
+    while (running.length < maxConcurrency && queue.length > 0) {
+      const task = queue.shift();
+      const taskPromise = executeTaskSafely(task)
+        .then((result) => ({ task: task.id, result, success: true }))
+        .catch((error) => ({
+          task: task.id,
+          error: error.message,
+          success: false,
+        }))
+        .finally(() => {
+          // Entferne aus running array
+          const index = running.indexOf(taskPromise);
+          if (index > -1) running.splice(index, 1);
+        });
+
+      running.push(taskPromise);
+    }
+
+    // Warte auf mindestens eine Task
+    if (running.length > 0) {
+      const completed = await Promise.race(running);
+      results.push(completed);
+    }
+  }
+
+  return results;
+};
+
+const executeTaskSafely = async (task) => {
+  const startTime = Date.now();
+
+  try {
+    const result = await task.execute();
+    return {
+      ...result,
+      executionTime: Date.now() - startTime,
+      memoryUsage: process.memoryUsage().heapUsed,
+    };
+  } catch (error) {
+    // Cleanup bei Fehler
+    if (task.cleanup) await task.cleanup();
+    throw error;
+  }
+};
+```
 
 ---
 
 ## ✅ Zusammenfassung
 
-Nach Kapitel 8 kannst du:
-- Flows auf Effizienz und Stabilität optimieren,  
-- Fehler erkennen, loggen und automatisch behandeln,  
-- Ressourcenverbrauch steuern,  
-- und mit Logs gezielt Performance verbessern.  
+Nach Kapitel 8 kannst du:
+
+- Flows auf Effizienz und Stabilität optimieren,
+- Fehler erkennen, loggen und automatisch behandeln,
+- Ressourcenverbrauch steuern,
+- Performance-Bottlenecks systematisch identifizieren,
+- und mit Logs gezielt Performance verbessern.
 
 Im nächsten Kapitel (9) lernst du, wie du aus diesen Logs und Feedbacks **automatische Qualitätsmetriken** generierst – um deinen Agenten langfristig zu bewerten und zu verbessern.
